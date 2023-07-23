@@ -1386,6 +1386,10 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 			if(partner != src)
 				src.members += partner
 
+	proc/relay_signal(datum/signal/signal)
+		signal.data["relayed"] = 1
+		src.link.post_signal(src, signal)
+
 	power_change()
 		if(powered())
 			icon_state = "net_radio"
@@ -1487,17 +1491,15 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 
 		if(signal.transmission_method == TRANSMISSION_WIRE)
 			if(signal.data["relayed"])
-				src.link.post_signal(src, signal)
 				return
 			var/datum/signal/relayed_signal = get_free_signal()
 			relayed_signal.source = signal.source
 			relayed_signal.transmission_method = TRANSMISSION_WIRE
 			relayed_signal.data = signal.data:Copy()
-			relayed_signal.data["relayed"] = 1
 			if(signal.data_file)
 				relayed_signal.data_file = signal.data_file.copy_file()
 			for(var/obj/machinery/networked/relay/R in members)
-				R.receive_signal(relayed_signal, transmission_type, range, connection_id)
+				R.relay_signal(relayed_signal)
 			return
 
 	disposing()
