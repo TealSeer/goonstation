@@ -1363,7 +1363,7 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 	density = 1
 	icon_state = "net_radio"
 	device_tag = "PNET_RELAY"
-	var/list/members = list()
+	var/list/peers = list()
 
 	New()
 		..()
@@ -1379,16 +1379,22 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 					src.link = test_link
 					src.link.master = src
 
-			find_members()
+			find_peers()
 
-	proc/find_members()
-		for(var/obj/machinery/networked/relay/partner in by_type[/obj/machinery/networked/relay])
-			if(partner != src)
-				src.members += partner
+	proc/find_peers()
+		for(var/obj/machinery/networked/relay/peer in by_type[/obj/machinery/networked/relay])
+			if(peer != src)
+				src.peers += peer
 
 	proc/relay_signal(datum/signal/signal)
-		signal.data["relayed"] = 1
-		src.link.post_signal(src, signal)
+		var/datum/signal/relayed_signal = get_free_signal()
+		relayed_signal.source = signal.source
+		relayed_signal.transmission_method = TRANSMISSION_WIRE
+		relayed_signal.data = signal.data:Copy()
+		if(signal.data_file)
+			relayed_signal.data_file = signal.data_file.copy_file()
+		relayed_signal.data["relayed"] = 1
+		src.link.post_signal(src, relayed_signal)
 
 	power_change()
 		if(powered())
@@ -1408,8 +1414,8 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 		var/dat = "<html><head><title>Network Relay</title></head><body>"
 
 		dat += "Peers<hr>"
-		if(length(members))
-			for(var/obj/machinery/networked/relay/peer in members)
+		if(length(peers))
+			for(var/obj/machinery/networked/relay/peer in peers)
 				dat += peer.net_id
 				dat += "<br>"
 
@@ -1492,20 +1498,13 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 		if(signal.transmission_method == TRANSMISSION_WIRE)
 			if(signal.data["relayed"])
 				return
-			var/datum/signal/relayed_signal = get_free_signal()
-			relayed_signal.source = signal.source
-			relayed_signal.transmission_method = TRANSMISSION_WIRE
-			relayed_signal.data = signal.data:Copy()
-			if(signal.data_file)
-				relayed_signal.data_file = signal.data_file.copy_file()
-			for(var/obj/machinery/networked/relay/R in members)
-				R.relay_signal(relayed_signal)
+			for(var/obj/machinery/networked/relay/R in peers)
+				R.relay_signal(signal)
 			return
 
 	disposing()
 		STOP_TRACKING
 		..()
-
 
 TYPEINFO(/obj/machinery/networked/radio)
 	mats = 8
