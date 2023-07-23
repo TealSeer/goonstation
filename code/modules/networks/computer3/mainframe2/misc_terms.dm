@@ -1403,6 +1403,12 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 
 		var/dat = "<html><head><title>Network Relay</title></head><body>"
 
+		dat += "Peers<hr>"
+		if(length(members))
+			for(var/obj/machinery/networked/relay/peer in members)
+				dat += peer.net_id
+				dat += "<br>"
+
 		var/readout_color = "#000000"
 		var/readout = "ERROR"
 		if(src.host_id)
@@ -1481,7 +1487,6 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 
 		if(signal.transmission_method == TRANSMISSION_WIRE)
 			if(signal.data["relayed"])
-				signal.data:Remove("relayed")
 				src.link.post_signal(src, signal)
 				return
 			var/datum/signal/relayed_signal = get_free_signal()
