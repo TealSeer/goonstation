@@ -4,6 +4,7 @@
 // HIGH-TECH tape storage
 // A bomb simulator.  Test bombs in VR!
 // Outpost self-destruct !nuke!
+// Network relay
 // A wirenet -> wireless link thing.
 // A printer! All the fun of printing, now in SS13!
 // Pathogen manipulator TO-DO
@@ -1354,6 +1355,149 @@ TYPEINFO(/obj/machinery/networked/nuclear_charge)
 		SEND_SIGNAL(src, COMSIG_MOVABLE_POST_RADIO_PACKET, status_signal)
 
 #undef DISARM_CUTOFF
+
+/obj/machinery/networked/relay
+	name = "Network Relay"
+	desc = "A device for relaying signals between networks."
+	anchored = ANCHORED
+	density = 1
+	icon_state = "net_radio"
+	device_tag = "PNET_RELAY"
+	var/list/members = list()
+
+	New()
+		..()
+		START_TRACKING
+
+		src.net_id = generate_net_id(src)
+
+		SPAWN(0.5 SECONDS)
+			if(!src.link)
+				var/turf/T = get_turf(src)
+				var/obj/machinery/power/data_terminal/test_link = locate() in T
+				if(test_link && !DATA_TERMINAL_IS_VALID_MASTER(test_link, test_link.master))
+					src.link = test_link
+					src.link.master = src
+
+			find_members()
+
+	proc/find_members()
+		for(var/obj/machinery/networked/relay/partner in by_type[/obj/machinery/networked/relay])
+			if(partner != src)
+				src.members += partner
+
+	power_change()
+		if(powered())
+			icon_state = "net_radio"
+			status &= ~NOPOWER
+		else
+			SPAWN(rand(0, 15))
+				icon_state = "net_radio0"
+				status |= NOPOWER
+
+	attack_hand(mob/user)
+		if(..() || (status & (NOPOWER|BROKEN)))
+			return
+
+		src.add_dialog(user)
+
+		var/dat = "<html><head><title>Network Relay</title></head><body>"
+
+		var/readout_color = "#000000"
+		var/readout = "ERROR"
+		if(src.host_id)
+			readout_color = "#33FF00"
+			readout = "OK CONNECTION"
+		else
+			readout_color = "#F80000"
+			readout = "NO CONNECTION"
+
+		dat += "<hr>Host Connection: "
+		dat += "<table border='1' style='background-color:[readout_color]'><tr><td><font color=white>[readout]</font></td></tr></table><br>"
+
+		dat += "<a href='?src=\ref[src];reset=1'>Reset Connection</a><br>"
+
+		if (src.panel_open)
+			dat += net_switch_html()
+
+		user.Browse(dat,"window=net_relay;size=245x302")
+		onclose(user,"net_relay")
+		return
+
+	attackby(obj/item/W, mob/user)
+		if (isscrewingtool(W))
+			playsound(src.loc, 'sound/items/Screwdriver.ogg', 50, 1)
+			boutput(user, "You [src.panel_open ? "secure" : "unscrew"] the maintenance panel.")
+			src.panel_open = !src.panel_open
+			src.updateUsrDialog()
+			return
+		else
+			..()
+
+	Topic(href, href_list)
+		if(..())
+			return
+
+		src.add_dialog(usr)
+
+		if (href_list["reset"])
+			if(last_reset && (last_reset + NETWORK_MACHINE_RESET_DELAY >= world.time))
+				return
+
+			if(!host_id)
+				return
+
+			src.last_reset = world.time
+			var/rem_host = src.host_id ? src.host_id : src.old_host_id
+			src.host_id = null
+			src.old_host_id = null
+			src.post_status(rem_host, "command","term_disconnect")
+			SPAWN(0.5 SECONDS)
+				src.post_status(rem_host, "command","term_connect","device",src.device_tag)
+
+			src.updateUsrDialog()
+			return
+
+		src.add_fingerprint(usr)
+		return
+
+	process()
+		..()
+		if(status & NOPOWER)
+			return
+
+		if(!link)
+			return
+
+	receive_signal(datum/signal/signal, transmission_type, range, connection_id)
+		if(status & (NOPOWER) || !src.link)
+			return
+		if(!signal || !src.net_id)
+			return
+
+		var/target = signal.data["sender"] ? signal.data["sender"] : signal.data["netid"]
+		if(!target)
+			return
+
+		if(signal.transmission_method == TRANSMISSION_WIRE)
+			if(signal.data["relayed"])
+				signal.data:Remove("relayed")
+				src.link.post_signal(src, signal)
+				return
+			var/datum/signal/relayed_signal = get_free_signal()
+			relayed_signal.source = signal.source
+			relayed_signal.transmission_method = TRANSMISSION_WIRE
+			relayed_signal.data = signal.data:Copy()
+			relayed_signal.data["relayed"] = 1
+			if(signal.data_file)
+				relayed_signal.data_file = signal.data_file.copy_file()
+			for(var/obj/machinery/networked/relay/R in members)
+				R.receive_signal(relayed_signal, transmission_type, range, connection_id)
+			return
+
+	disposing()
+		STOP_TRACKING
+		..()
 
 
 TYPEINFO(/obj/machinery/networked/radio)
