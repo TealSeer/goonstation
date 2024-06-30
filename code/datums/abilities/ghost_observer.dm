@@ -152,7 +152,9 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 		src.addAbility(/datum/targetable/ghost_observer/reenter_corpse)
 		src.addAbility(/datum/targetable/ghost_observer/toggle_lighting)
 		src.addAbility(/datum/targetable/ghost_observer/toggle_ghosts)
-		src.addAbility(/datum/targetable/ghost_observer/observe_object)
+		if (istype(ticker.mode, /datum/game_mode/gang))
+			src.addAbility(/datum/targetable/ghost_observer/toggle_gang_overlay)
+
 		// src.addAbility(/datum/targetable/ghost_observer/afterlife_Bar)
 		// src.addAbility(/datum/targetable/ghost_observer/respawn_animal)	//moved to respawn_options menu
 		src.addAbility(/datum/targetable/ghost_observer/respawn_options)
@@ -180,10 +182,11 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 		src.removeAbility(/datum/targetable/ghost_observer/reenter_corpse)
 		src.removeAbility(/datum/targetable/ghost_observer/toggle_lighting)
 		src.removeAbility(/datum/targetable/ghost_observer/toggle_ghosts)
-		src.removeAbility(/datum/targetable/ghost_observer/observe_object)
 		// src.removeAbility(/datum/targetable/ghost_observer/afterlife_Bar)
 		// src.removeAbility(/datum/targetable/ghost_observer/respawn_animal)
 		src.removeAbility(/datum/targetable/ghost_observer/respawn_options)
+		if (istype(ticker.mode, /datum/game_mode/gang))
+			src.removeAbility(/datum/targetable/ghost_observer/toggle_gang_overlay)
 
 #ifdef HALLOWEEN
 		src.removeAbility(/datum/targetable/ghost_observer/spooktober_hud)
@@ -214,6 +217,7 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	preferred_holder_type = /datum/abilityHolder/ghost_observer
 	icon = 'icons/mob/ghost_observer_abilities.dmi'
 	icon_state = "teleport"
+	do_logs = FALSE
 
 ///////////////////////////////////////
 
@@ -226,19 +230,21 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder.owner, /mob/dead/observer))
 			var/mob/dead/observer/ghost = holder.owner
 			ghost.dead_tele()
 
 /datum/targetable/ghost_observer/observe
 	name = "Observe"
-	desc = "Observe a specific person."
-	icon_state = "observe-person"
+	desc = "Observe a specific person, NPC, or object."
+	icon_state = "observeobject"
 	targeted = 0
 	cooldown = 0
 
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder.owner, /mob/dead/observer))
 			var/mob/dead/observer/ghost = holder.owner
 			ghost.observe()
@@ -252,6 +258,7 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder.owner, /mob/dead/observer))
 			var/mob/dead/observer/ghost = holder.owner
 			ghost.reenter_corpse()
@@ -266,6 +273,7 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cooldown = 0
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder.owner, /mob/dead/observer))
 			var/mob/dead/observer/ghost = holder.owner
 			ghost.toggle_lighting()
@@ -278,23 +286,10 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cooldown = 0
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder.owner, /mob/dead/observer))
 			var/mob/dead/observer/ghost = holder.owner
 			ghost.toggle_ghosts()
-
-
-/datum/targetable/ghost_observer/observe_object
-	name = "Observe Object"
-	desc = "Observe one of selected objects in the world."
-	icon_state = "observeobject"
-	targeted = 0
-	cooldown = 0
-
-	cast(atom/target)
-		if (holder && istype(holder.owner, /mob/dead/observer))
-			var/mob/dead/observer/ghost = holder.owner
-			ghost.observe_object()
-
 
 /datum/targetable/ghost_observer/toggle_HUD
 	name = "Hide HUD"
@@ -304,16 +299,22 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cooldown = 0
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder, /datum/abilityHolder/ghost_observer) && istype(holder.owner, /mob/dead/observer))
+			var/mob/dead/observer/observer = holder.owner
 			var/datum/abilityHolder/ghost_observer/GH = holder
 			if (GH.display_buttons)
 				name = "Show HUD"
 				desc = "Show all HUD buttons."
 				icon_state = "show"
+				if(observer.hud.respawn_timer)
+					observer.hud.remove_object(observer.hud.respawn_timer)
 			else
 				name = "Hide HUD"
 				desc = "Hide all HUD buttons."
 				icon_state = "hide"
+				if(observer.hud.respawn_timer)
+					observer.hud.add_object(observer.hud.respawn_timer)
 
 			GH.toggle()
 			GH.updateButtons(1)
@@ -346,6 +347,7 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 		object.contextActions += new /datum/contextAction/ghost_respawn/respawn_admin_mouse()
 
 	cast(atom/target)
+		. = ..()
 		displaying_buttons = !displaying_buttons
 		if (ticker?.mode && istype(ticker.mode, /datum/game_mode/football))
 			boutput(holder.owner, "<h3 class='alert'>Sorry, respawn options aren't availbale during football mode.</span>")
@@ -359,8 +361,10 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	icon_state = "respawn-animal"
 	targeted = 0
 	cooldown = 0
+	do_logs = TRUE
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder.owner, /mob/dead/observer))
 			var/mob/dead/observer/ghost = holder.owner
 			ghost.respawn_as_animal()
@@ -373,6 +377,7 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cooldown = 0
 
 	cast(atom/target)
+		. = ..()
 		if (holder && istype(holder.owner, /mob/dead/observer))
 			var/mob/dead/observer/ghost = holder.owner
 			ghost.go_to_respawn_arena()
@@ -413,8 +418,8 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cast(obj/item/target)
 		if (!holder)
 			return 1
-
-		boutput(holder.owner, "<span class='alert'>You exert some force to levitate [target]!</span>")
+		. = ..()
+		boutput(holder.owner, SPAN_ALERT("You exert some force to levitate [target]!"))
 		SPAWN(rand(30,50))
 			if (!holder)
 				return
@@ -425,12 +430,12 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 					if (L.buckled)
 						animate_levitate(L, 1, 10)
 				animate_levitate(target, 1, 10)
-				boutput(holder.owner, "<span class='alert'>You levitate[target] and its occupant(s)!</span>")
+				boutput(holder.owner, SPAN_ALERT("You levitate[target] and its occupant(s)!"))
 			else if (istype(target, /obj/item))
 				animate_levitate(target, 1, 10)
-				boutput(holder.owner, "<span class='alert'>You levitate[target]!</span>")
+				boutput(holder.owner, SPAN_ALERT("You levitate[target]!"))
 			else
-				boutput(holder.owner, "<span class='alert'>But it's beyond your power!</span>")
+				boutput(holder.owner, SPAN_ALERT("But it's beyond your power!"))
 
 
 /datum/targetable/ghost_observer/spooky_sounds
@@ -449,11 +454,11 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cast()
 		if (!holder)
 			return 1
-
+		. = ..()
 		var/turf/T = get_turf(holder.owner)
 		var/S = pick('sound/ambience/nature/Wind_Cold1.ogg', 'sound/ambience/nature/Wind_Cold2.ogg', 'sound/ambience/nature/Wind_Cold3.ogg','sound/ambience/nature/Cave_Bugs.ogg', 'sound/ambience/nature/Glacier_DeepRumbling1.ogg', 'sound/effects/bones_break.ogg', 'sound/effects/glitchy1.ogg',	'sound/effects/gust.ogg', 'sound/effects/static_horror.ogg', 'sound/effects/blood.ogg', 'sound/effects/kaboom.ogg')
-		playsound(T, S, 30, 0, -1)
-		boutput(holder.owner, "<span class='alert'>You make a spooky sound!</span>")
+		playsound(T, S, 30, FALSE, -1)
+		boutput(holder.owner, SPAN_ALERT("You make a spooky sound!"))
 
 
 /datum/targetable/ghost_observer/decorate
@@ -472,7 +477,6 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cast(atom/target, params)
 		if (..())
 			return 1
-
 		var/turf/T = get_turf(target)
 		if (isturf(T))
 			var/effect = input("Which effect?", "Effect", "Random") in effects
@@ -484,17 +488,17 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 				if (1)
 					new/obj/item/reagent_containers/food/snacks/ectoplasm(T)
 				if (2)
-					new/obj/decal/cleanable/cobwebFloor(T)
+					new/obj/decal/cleanable/cobwebFloor/halloween(T)
 				if (3)
 					new/obj/item/device/light/candle/spooky/summon(T)
 				if (4)
 					new/obj/item/reagent_containers/food/snacks/plant/pumpkin/summon(T)
 				if (5)
-					new/obj/decal/fakeobjects/skeleton/unanchored/summon(T)
+					new/obj/fakeobject/skeleton/unanchored/summon(T)
 				if (6)
 					new/obj/decal/cleanable/vomit/spiders(T)
 
-			boutput(usr, "<span class='notice'>Matter from your realm appears near the designated location!</span>")
+			boutput(usr, SPAN_NOTICE("Matter from your realm appears near the designated location!"))
 
 
 /datum/targetable/ghost_observer/spooktober_writing
@@ -512,7 +516,6 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	cast(atom/target, params)
 		if (..())
 			return 1
-
 		var/list/c_default = list("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
 		"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Exclamation Point", "Question Mark", "Period", "Comma", "Colon", "Semicolon", "Ampersand", "Left Parenthesis", "Right Parenthesis",
 		"Left Bracket", "Right Bracket", "Percent", "Plus", "Minus", "Times", "Divided", "Equals", "Less Than", "Greater Than")
@@ -559,20 +562,22 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	start_on_cooldown = 1
 	special_screen_loc = "SOUTH,CENTER+2"
 	pointCost = 1000
+	do_logs = TRUE
 
 	cast()
 		if (!holder)
 			return 1
-
+		. = ..()
 		var/turf/T = get_turf(holder.owner)
 		if (!istype(T, /turf/space) && !T.density)
 			var/obj/itemspecialeffect/poof/P = new /obj/itemspecialeffect/poof
 			P.setup(T)
-			playsound(T, 'sound/effects/poff.ogg', 50, 1, pitch = 1)
+			playsound(T, 'sound/effects/poff.ogg', 50, TRUE, pitch = 1)
 			new /obj/critter/bat(T)
-			boutput(holder.owner, "<span class='alert'>You call forth a bat!</span>")
+			boutput(holder.owner, SPAN_ALERT("You call forth a bat!"))
 		else
-			boutput(holder.owner, "<span class='alert'>You can't put a bat there!</span>")
+			boutput(holder.owner, SPAN_ALERT("You can't put a bat there!"))
+			return 1
 
 /datum/targetable/ghost_observer/manifest
 	name = "Manifest"
@@ -587,21 +592,22 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 	pointCost = 1500
 	var/time_to_manifest = 1 MINUTES		//How much time should they spend in the form if left uninterrupted.
 	var/applied_filter_index
+	var/original_color = null
+	do_logs = TRUE
 
 
 	cast()
 		if (!holder)
 			return 1
-
+		. = ..()
 		start_spooking()
-		//////////////////////////////////////////////////////////////////////
-		sleep(time_to_manifest)
-		//////////////////////////////////////////////////////////////////////
-		stop_spooking()
+		SPAWN(time_to_manifest)
+			stop_spooking()
 
 
 
 	proc/start_spooking()
+		src.original_color = src.holder.owner.color
 		src.holder.owner.color = rgb(170, 0, 0)
 		anim_f_ghost_blur(src.holder.owner)
 
@@ -609,15 +615,53 @@ var/global/datum/spooktober_ghost_handler/spooktober_GH = new()
 			var/datum/abilityHolder/ghost_observer/GAH = holder
 			GAH.spooking = 1
 		REMOVE_ATOM_PROPERTY(src.holder.owner, PROP_MOB_INVISIBILITY, src.holder.owner)
-		boutput(holder.owner, "<span class='notice'>You start being spooky! The living can all see you!</span>")
+		boutput(holder.owner, SPAN_NOTICE("You start being spooky! The living can all see you!"))
 
 	//remove the filter animation when we're done.
 	proc/stop_spooking()
-		src.holder.owner.color = null
+		src.holder.owner.color = src.original_color
 		if (istype(holder, /datum/abilityHolder/ghost_observer))
 			var/datum/abilityHolder/ghost_observer/GAH = holder
 			GAH.spooking = 0
 		APPLY_ATOM_PROPERTY(src.holder.owner, PROP_MOB_INVISIBILITY, src.holder.owner, ghost_invisibility)
-		boutput(holder.owner, "<span class='alert'>You stop being spooky!</span>")
+		boutput(holder.owner, SPAN_ALERT("You stop being spooky!"))
 
 #endif
+
+/datum/targetable/ghost_observer/toggle_gang_overlay
+	name = "Toggle gang territory overlay"
+	desc = "Toggles the colored gang overlay."
+	icon_state = "gang_overlay"
+	targeted = 0
+	cooldown = 0
+	var/datum/mind/ownerMind
+
+	proc/remove_self(mind)
+		var/datum/client_image_group/imgroup = get_image_group(CLIENT_IMAGE_GROUP_GANGS)
+		if (imgroup.subscribed_minds_with_subcount[mind] > 0)
+			imgroup.remove_mind(mind)
+	cast()
+		if (!holder)
+			return TRUE
+		. = ..()
+		var/mob/M = holder.owner
+
+		ownerMind = M.mind
+		var/datum/client_image_group/imgroup = get_image_group(CLIENT_IMAGE_GROUP_GANGS)
+		var/togglingOn = FALSE
+		if (imgroup.subscribed_minds_with_subcount[ownerMind] > 0)
+			imgroup.remove_mind(ownerMind)
+			UnregisterSignal(ownerMind, COMSIG_MIND_DETACH_FROM_MOB)
+		else
+			togglingOn = TRUE
+			imgroup.add_mind(ownerMind)
+			RegisterSignal(ownerMind, COMSIG_MIND_DETACH_FROM_MOB, PROC_REF(remove_self))
+
+		boutput(M, "Gang territories turned [togglingOn ? "on" : "off"].")
+		return FALSE
+	disposing()
+		var/datum/client_image_group/imgroup = get_image_group(CLIENT_IMAGE_GROUP_GANGS)
+		if (imgroup.subscribed_minds_with_subcount[ownerMind] > 0)
+			imgroup.remove_mind(ownerMind)
+		UnregisterSignal(ownerMind, COMSIG_MIND_DETACH_FROM_MOB)
+		..()

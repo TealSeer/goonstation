@@ -18,7 +18,7 @@ obj/machinery/computer/general_air_control
 
 	New()
 		..()
-		MAKE_DEFAULT_RADIO_PACKET_COMPONENT(null, frequency)
+		MAKE_DEFAULT_RADIO_PACKET_COMPONENT(null, null, frequency)
 
 	special_deconstruct(obj/computerframe/frame as obj)
 		frame.circuit.frequency = src.frequency
@@ -147,7 +147,7 @@ Max Output Pressure: [output_pressure] kPa<BR>"}
 				return
 
 			if(!allowed(usr))
-				boutput(usr, "<span class='alert'>Access Denied!</span>")
+				boutput(usr, SPAN_ALERT("Access Denied!"))
 				return
 
 			if(href_list["in_refresh_status"])
@@ -353,9 +353,9 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 /obj/machinery/computer/general_alert
 	New()
 		..()
-		MAKE_DEFAULT_RADIO_PACKET_COMPONENT("control", frequency)
-		MAKE_SENDER_RADIO_PACKET_COMPONENT("respond", respond_frequency)
-		MAKE_DEFAULT_RADIO_PACKET_COMPONENT("receive", receive_frequency)
+		MAKE_DEFAULT_RADIO_PACKET_COMPONENT(null, "control", frequency)
+		MAKE_DEFAULT_RADIO_PACKET_COMPONENT(null, "respond", respond_frequency)
+		MAKE_DEFAULT_RADIO_PACKET_COMPONENT(null, "receive", receive_frequency)
 
 	receive_signal(datum/signal/signal)
 		if(!signal || signal.encryption) return
@@ -560,7 +560,7 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 		if (..())
 			return 0
 		if (!src.allowed(usr))
-			boutput(usr, "<span class='alert'>Access denied!</span>")
+			boutput(usr, SPAN_ALERT("Access denied!"))
 			return 0
 
 		var/datum/signal/signal = get_free_signal()
@@ -600,7 +600,7 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 				if (is_incapacitated(usr) || usr.restrained())
 					return 0
 				if (!src.allowed(usr))
-					boutput(usr, "<span class='alert'>Access denied!</span>")
+					boutput(usr, SPAN_ALERT("Access denied!"))
 					return 0
 				if (!isnum_safe(change))
 					return 0

@@ -10,7 +10,6 @@
 	var/base_icon_state = "computer_generic"
 	var/temp = "<b>Thinktronic BIOS V2.1</b><br>"
 	var/temp_add = null
-	var/do_scroll_bottom = FALSE
 	var/obj/item/disk/data/fixed_disk/hd = null
 	var/datum/computer/file/terminal_program/active_program
 	var/datum/computer/file/terminal_program/host_program //active is set to this when the normal active quits, if available
@@ -26,7 +25,7 @@
 	var/setup_drive_size = 64
 	var/setup_drive_type = null //Use this path for the hd
 	var/setup_frame_type = /obj/computer3frame //What kind of frame does it spawn while disassembled.  This better be a type of /obj/compute3frame !!
-	var/setup_starting_program = null //This program will start out installed on the drive
+	var/setup_starting_program = null //This program will start out installed on the drive (can be a path or a list of paths)
 	var/setup_starting_os = null //This program will start out installed AND AS ACTIVE PROGRAM
 	var/setup_starting_peripheral1 = null //Please note that the user cannot install more than 3.
 	var/setup_starting_peripheral2 = null //And the os tends to need that third one for the card reader
@@ -101,7 +100,7 @@
 		communications
 			name = "Communications Console"
 			icon_state = "comm"
-			setup_starting_program = /datum/computer/file/terminal_program/communications
+			setup_starting_program = list(/datum/computer/file/terminal_program/communications, /datum/computer/file/terminal_program/job_controls)
 			setup_starting_peripheral1 = /obj/item/peripheral/network/powernet_card
 			setup_starting_peripheral2 = /obj/item/peripheral/network/radio/locked/status
 			setup_drive_size = 80
@@ -284,7 +283,7 @@
 		screen_image.blend_mode = BLEND_ADD
 		screen_image.layer = LIGHTING_LAYER_BASE
 		screen_image.color = list(0.33,0.33,0.33, 0.33,0.33,0.33, 0.33,0.33,0.33)
-		src.UpdateOverlays(screen_image, "screen_image")
+		src.AddOverlays(screen_image, "screen_image")
 
 	SPAWN(0.4 SECONDS)
 		if(!length(src.peripherals)) // make sure this is the first time we're initializing this computer
@@ -306,13 +305,13 @@
 					src.hd = new /obj/item/disk/data/fixed_disk(src)
 				src.hd.file_amount = src.setup_drive_size
 
-			if(ispath(src.setup_starting_program))
-				var/datum/computer/file/terminal_program/starting = new src.setup_starting_program
+			for (var/program_path in (list() + src.setup_starting_program)) //neat hack to make it work with lists or a single path
+				if(ispath(program_path))
+					var/datum/computer/file/terminal_program/starting = new program_path
 
-				src.hd.file_amount = max(src.hd.file_amount, starting.size)
+					src.hd.file_amount = max(src.hd.file_amount, starting.size)
 
-				starting.transfer_holder(src.hd)
-				//src.processing_programs += src.active_program
+					starting.transfer_holder(src.hd)
 
 			if(ispath(src.setup_starting_os) && src.hd)
 				var/datum/computer/file/terminal_program/os/os = new src.setup_starting_os
@@ -342,7 +341,6 @@
 /obj/machinery/computer3/ui_interact(mob/user, datum/tgui/ui)
 	ui = tgui_process.try_update_ui(user, src, ui)
 	if(!ui)
-		src.do_scroll_bottom = TRUE
 		ui = new(user, src, "Terminal")
 		ui.open()
 
@@ -359,7 +357,7 @@
 	for (var/i in 1 to length(src.peripherals)) // originally i had all this stuff in static data, but the buttons didnt update.
 		var/obj/item/peripheral/periph = src.peripherals[i]
 		if(periph.setup_has_badge)
-			var/pdata = periph.return_badge() // reduces copy pasting
+			var/list/pdata = periph.return_badge() // reduces copy pasting
 			pdata["index"] = i
 			if(pdata)
 				var/bcolor = pdata["contents"]
@@ -375,9 +373,7 @@
 		"user" = user,
 		"fontColor" = src.setup_font_color, // display monochrome values
 		"bgColor" = src.setup_bg_color,
-		"doScrollBottom" = src.do_scroll_bottom
 	)
-	src.do_scroll_bottom = FALSE
 
 /obj/machinery/computer3/ui_act(action, params)
 	. = ..()
@@ -401,7 +397,7 @@
 				if(src.diskette)
 					//Ai/cyborgs cannot press a physical button from a room away.
 					if((issilicon(usr) || isAI(usr)) && BOUNDS_DIST(src, usr) > 0)
-						boutput(usr, "<span class='alert'>You cannot press the ejection button.</span>")
+						boutput(usr, SPAN_ALERT("You cannot press the ejection button."))
 						return
 					for(var/datum/computer/file/terminal_program/P in src.processing_programs)
 						P.disk_ejected(src.diskette)
@@ -437,6 +433,39 @@
 						I.loc = src
 						dv.disk = I
 					update_static_data(usr)
+				else if (findtext(params["card"], "/obj/item/peripheral/cheget_key"))
+					var/obj/item/peripheral/cheget_key/cheget_key = src.peripherals[params["index"]]
+					if (cheget_key.inserted_key)
+						usr.put_in_hand_or_eject(cheget_key.inserted_key)
+						cheget_key.inserted_key = null
+						boutput(usr, SPAN_NOTICE("You turn the key and pull it out of the lock. The green light turns off."))
+						playsound(src.loc, 'sound/impact_sounds/Generic_Click_1.ogg', 30, 1)
+						SPAWN(1 SECOND)
+							if(!cheget_key.inserted_key)
+								src.visible_message(SPAN_ALERT("[src] emits a dour boop and a small red light flickers on."))
+								playsound(src.loc, 'sound/machines/cheget_sadbloop.ogg', 30, 1)
+								var/datum/signal/deauthSignal = get_free_signal()
+								deauthSignal.data = list("authcode"="\ref[src]")
+								cheget_key.send_command("key_deauth", deauthSignal)
+
+					else if(istype(I, /obj/item/device/key/cheget))
+						usr.drop_item()
+						I.loc = src
+						cheget_key.inserted_key = I
+						boutput(usr, SPAN_NOTICE("You insert the key and turn it."))
+						playsound(src.loc, 'sound/impact_sounds/Generic_Click_1.ogg', 30, 1)
+						SPAWN(1 SECOND)
+							if(cheget_key.inserted_key)
+								src.visible_message(SPAN_ALERT("[src] emits a satisfied boop and a little green light comes on."))
+								playsound(src.loc, 'sound/machines/cheget_goodbloop.ogg', 30, 1)
+								var/datum/signal/authSignal = get_free_signal()
+								authSignal.data = list("authcode"="\ref[I]")
+								cheget_key.send_command("key_auth", authSignal)
+					else if(istype(I, /obj/item/device/key))
+						boutput(usr, SPAN_ALERT("It doesn't fit.  Must be the wrong key."))
+						src.visible_message(SPAN_ALERT("[src] emits a grumpy boop."))
+						playsound(src.loc, 'sound/machines/cheget_grumpbloop.ogg', 30, 1)
+					update_static_data(usr)
 	. = TRUE
 
 /obj/machinery/computer3/updateUsrDialog()
@@ -444,7 +473,6 @@
 	if (src.temp_add)
 		src.temp += src.temp_add
 		src.temp_add = null
-		src.do_scroll_bottom = TRUE
 
 /obj/machinery/computer3/process()
 	if(status & BROKEN)
@@ -471,7 +499,7 @@
 		status &= ~NOPOWER
 		light.enable()
 		if(glow_in_dark_screen)
-			src.UpdateOverlays(screen_image, "screen_image")
+			src.AddOverlays(screen_image, "screen_image")
 	else
 		SPAWN(rand(0, 15))
 			icon_state = src.base_icon_state
@@ -491,9 +519,9 @@
 			update_static_data(usr)
 			return
 		else if(src.diskette)
-			boutput(user, "<span class='alert'>There's already a disk inside!</span>")
+			boutput(user, SPAN_ALERT("There's already a disk inside!"))
 		else if(!src.setup_has_internal_disk)
-			boutput(user, "<span class='alert'>There's no visible peripheral device to insert the disk into!</span>")
+			boutput(user, SPAN_ALERT("There's no visible peripheral device to insert the disk into!"))
 
 	else if (isscrewingtool(W))
 		playsound(src.loc, 'sound/items/Screwdriver.ogg', 50, 1)
@@ -507,7 +535,7 @@
 			return
 
 		if (dv.authid)
-			boutput(user, "<span class='alert'>There is already a card inserted!</span>")
+			boutput(user, SPAN_ALERT("There is already a card inserted!"))
 		else
 			usr.drop_item()
 			W.loc = src
@@ -537,13 +565,13 @@
 	A.created_icon_state = src.base_icon_state
 	A.set_dir(src.dir)
 	if (src.status & BROKEN)
-		boutput(user, "<span class='notice'>The broken glass falls out.</span>")
+		user?.show_text("The broken glass falls out.", "blue")
 		var/obj/item/raw_material/shard/glass/G = new /obj/item/raw_material/shard/glass
 		G.set_loc( src.loc )
 		A.state = 3
 		A.icon_state = "3"
 	else
-		boutput(user, "<span class='notice'>You disconnect the monitor.</span>")
+		user?.show_text("You disconnect the monitor.", "blue")
 		A.state = 4
 		A.icon_state = "4"
 
@@ -592,8 +620,6 @@
 		if(3)
 			if (prob(25))
 				set_broken()
-		else
-	return
 
 /obj/machinery/computer3/emp_act()
 	..()
@@ -605,6 +631,20 @@
 	if (prob(power * 2.5))
 		set_broken()
 		src.set_density(0)
+
+/obj/machinery/computer3/bullet_act(obj/projectile/P)
+	. = ..()
+	switch (P.proj_data.damage_type)
+		if (D_KINETIC, D_PIERCING, D_SLASHING)
+			if (prob(P.power))
+				if (status & BROKEN)
+					playsound(src, "sound/impact_sounds/Glass_Shatter_[rand(1,3)].ogg", 50, TRUE)
+					src.unscrew_monitor()
+				else
+					src.set_broken()
+		if (D_ENERGY)
+			if (!(status & BROKEN) && prob(P.power))
+				src.set_broken()
 
 /obj/machinery/computer3/disposing()
 	if (hd)
@@ -816,7 +856,7 @@
 	inhand_image_icon = 'icons/mob/inhand/hand_general.dmi'
 	item_state = "briefcase"
 	desc = "A common item to find in an office.  Is that an antenna?"
-	flags = FPRINT | TABLEPASS| CONDUCT | NOSPLASH
+	flags = TABLEPASS| CONDUCT | NOSPLASH
 	force = 8
 	throw_speed = 1
 	throw_range = 4
@@ -856,11 +896,12 @@
 	proc/deploy(mob/user as mob)
 		var/turf/T = get_turf(src)
 		if(!T || !luggable)
-			boutput(user, "<span class='alert'>You can't seem to get the latch open!</span>")
+			boutput(user, SPAN_ALERT("You can't seem to get the latch open!"))
 			return
 
 		if (src.loc == user)
 			user.drop_item()
+			user.u_equip(src)
 		src.luggable.set_loc(T)
 		src.luggable.case = src
 		src.luggable.deployed = 1
@@ -895,7 +936,7 @@
 		if(usr.stat)
 			return
 
-		src.visible_message("<span class='alert'>[usr] folds [src] back up!</span>")
+		src.visible_message(SPAN_ALERT("[usr] folds [src] back up!"))
 		src.undeploy()
 		return
 
@@ -921,26 +962,26 @@
 				boutput(user, "You insert [W].")
 				update_static_data(usr)
 			else if(src.diskette)
-				boutput(user, "<span class='alert'>There's already a disk inside!</span>")
+				boutput(user, SPAN_ALERT("There's already a disk inside!"))
 			else if(!src.setup_has_internal_disk)
-				boutput(user, "<span class='alert'>There's no visible peripheral device to insert the disk into!</span>")
+				boutput(user, SPAN_ALERT("There's no visible peripheral device to insert the disk into!"))
 
 		else if (ispryingtool(W))
 			if(!src.cell)
-				boutput(user, "<span class='alert'>There is no energy cell inserted!</span>")
+				boutput(user, SPAN_ALERT("There is no energy cell inserted!"))
 				return
 
 			playsound(src.loc, 'sound/items/Crowbar.ogg', 50, 1)
 			src.cell.set_loc(get_turf(src))
 			src.cell = null
-			user.visible_message("<span class='alert'>[user] removes the power cell from [src]!.</span>","<span class='alert'>You remove the power cell from [src]!</span>")
+			user.visible_message(SPAN_ALERT("[user] removes the power cell from [src]!."),SPAN_ALERT("You remove the power cell from [src]!"))
 			src.power_change()
 			update_static_data(usr)
 			return
 
 		else if (istype(W, /obj/item/cell))
 			if(src.cell)
-				boutput(user, "<span class='alert'>There is already an energy cell inserted!</span>")
+				boutput(user, SPAN_ALERT("There is already an energy cell inserted!"))
 
 			else
 				user.drop_item()
@@ -958,7 +999,7 @@
 				return
 
 			if (dv.authid)
-				boutput(user, "<span class='alert'>There is already a card inserted!</span>")
+				boutput(user, SPAN_ALERT("There is already a card inserted!"))
 			else
 				usr.drop_item()
 				W.loc = src

@@ -49,7 +49,7 @@
 			var/list/CORPSES = landmarks[LANDMARK_PESTSTART]
 			var/list/JUNK = landmarks[LANDMARK_HALLOWEEN_SPAWN]
 			for(var/turf/T in CORPSES)
-				var/obj/decal/fakeobjects/skeleton/S = new/obj/decal/fakeobjects/skeleton(T)
+				var/obj/fakeobject/skeleton/S = new/obj/fakeobject/skeleton(T)
 				S.name = "corpse"
 				S.desc = "The mangled body of some poor [pick("chump","sap","chap","crewmember","jerk","dude","lady","idiot","employee","oaf")]."
 				S.icon = 'icons/misc/hstation.dmi'
@@ -136,7 +136,7 @@
 				survivors[player.real_name] = "alive"
 
 	if (survivors.len)
-		boutput(world, "<span class='notice'><B>The following survived the [disaster_name] event!</B></span>")
+		boutput(world, SPAN_NOTICE("<B>The following survived the [disaster_name] event!</B>"))
 		for(var/survivor in survivors)
 			var/condition = survivors[survivor]
 			switch(condition)
@@ -146,7 +146,7 @@
 					boutput(world, "<span>&emsp; <FONT size = 1>[survivor] stayed alive. Whereabouts unknown.</FONT></span>")
 
 	else
-		boutput(world, "<span class='notice'><B>No one survived the [disaster_name] event!</B></span>")
+		boutput(world, SPAN_NOTICE("<B>No one survived the [disaster_name] event!</B>"))
 
 #ifdef RP_MODE // if rp do not set to secret
 		world.save_mode("extended")
