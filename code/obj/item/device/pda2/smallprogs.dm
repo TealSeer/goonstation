@@ -1721,11 +1721,8 @@ Using electronic "Detomatix" SELF-DESTRUCT program is perhaps less simple!<br>
 			<b>Certain pressure values are of particular interest and will reward bonuses:</b>\
 			<br>"
 		for (var/peak in shippingmarket.pressure_crystal_peaks)
-			var/peak_value = text2num(peak)
-			var/mult = shippingmarket.pressure_crystal_peaks[peak]
 			. += "[peak] kiloblast: \
-				[mult > 1 ? "<B>" : ""]worth [round(mult * 100, 0.01)]% of normal. \
-				[mult > 1 ? "Maximum estimated value: [round(mult * PRESSURE_CRYSTAL_VALUATION(peak_value))]</B> credits." : ""]<br>"
+				Maximum estimated value: [round(5 * PRESSURE_CRYSTAL_VALUATION(peak))] credits.<br>"
 		. += "<br><b>Pressure crystal values already sold:</b>\
 			<br>"
 		for (var/value in shippingmarket.pressure_crystal_sales)

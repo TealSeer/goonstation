@@ -1,7 +1,7 @@
 #define SUPPLY_OPEN_TIME (1 SECOND) //Time it takes to open supply door in seconds.
 #define SUPPLY_CLOSE_TIME (15 SECONDS) //Time it takes to close supply door in seconds.
 /// The full explosion-power-to-credits conversion formula. Also used in smallprogs.dm
-#define PRESSURE_CRYSTAL_VALUATION(power) power ** 1.1 * 100
+#define PRESSURE_CRYSTAL_VALUATION(power) (power >= 310 ? (power ** 1.1 * 100) : (power ** 1.1 * 34))
 /// The number of peak points on the pressure crystal graph offering bonus credits
 #define PRESSURE_CRYSTAL_PEAK_COUNT 3
 
@@ -103,8 +103,8 @@
 
 		//set up pressure crystal market peaks
 		for (var/i in 1 to PRESSURE_CRYSTAL_PEAK_COUNT)
-			var/value = rand(1, 230)
-			src.pressure_crystal_peaks["[value]"] = (rand() * 2) + 1 //random number between 2 and 3
+			var/value = rand(50, 300)
+			src.pressure_crystal_peaks.Add(value)
 
 	proc/add_commodity(var/datum/commodity/new_c)
 		src.commodities["[new_c.comtype]"] = new_c
@@ -528,12 +528,14 @@
 			if (modifier < 1) //a range cutoff to ensure we never add credit value
 				value *= modifier
 		for (var/peak in src.pressure_crystal_peaks)
-			var/peak_value = text2num(peak) //I hate byond lists
-			//very similar to above except inverted and bounded by the multiplier of the peak
-			//another desmos: https://www.desmos.com/calculator/ahhoxuwho8
-			var/modifier = -1/(peak_value * 3) * ((pc.pressure - peak_value) ** 2) + src.pressure_crystal_peaks[peak]
-			if (modifier > 1)
-				value *= modifier
+			var/plus = abs(pc.pressure - peak)
+			switch(plus)
+				if(0 to 1)
+					value *= 5
+				if(1 to 5)
+					value *= 3
+				if(5 to 10)
+					value *= 2
 		value = round(value)
 		if (sell && value > 0)
 			src.pressure_crystal_sales["[pc.pressure]"] = value
