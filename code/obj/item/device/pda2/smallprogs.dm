@@ -85,7 +85,16 @@
 		dat += "\[ <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_DISPLAY_DEFAULT]'>Default</A> \]<BR>"
 		dat += "\[ <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_DISPLAY_SHUTTLE]'>Shuttle ETA</A> \]<BR>"
 		dat += "\[ <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_MESSAGE]'>Message</A> \]"
+		dat += "\[ <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_DISPLAY_DEFAULT]'>Default</A> \]<BR>"
+		dat += "\[ <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_DISPLAY_SHUTTLE]'>Shuttle ETA</A> \]<BR>"
+		dat += "\[ <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_MESSAGE]'>Message</A> \]"
 
+		dat += "<ul><li> Line 1: <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MESSAGE_TEXT_1]'>[ message1 ? message1 : "(none)"]</A>"
+		dat += "<li> Line 2: <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MESSAGE_TEXT_2]'>[ message2 ? message2 : "(none)"]</A></ul><br>"
+		dat += "\[ Alert: "
+		dat += " <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_DISPLAY_ALERT];alert=[STATUS_DISPLAY_PACKET_ALERT_REDALERT]'>Red Alert</A> |"
+		dat += " <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_DISPLAY_ALERT];alert=[STATUS_DISPLAY_PACKET_ALERT_LOCKDOWN]'>Lockdown</A> |"
+		dat += " <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MODE_DISPLAY_ALERT];alert=[STATUS_DISPLAY_PACKET_ALERT_BIOHAZ]'>Biohazard</A> \]<BR>"
 		dat += "<ul><li> Line 1: <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MESSAGE_TEXT_1]'>[ message1 ? message1 : "(none)"]</A>"
 		dat += "<li> Line 2: <A HREF='?src=\ref[src];statdisp=[STATUS_DISPLAY_PACKET_MESSAGE_TEXT_2]'>[ message2 ? message2 : "(none)"]</A></ul><br>"
 		dat += "\[ Alert: "
@@ -1720,11 +1729,17 @@ Using electronic "Detomatix" SELF-DESTRUCT program is perhaps less simple!<br>
 			<br><br>\
 			<b>Certain pressure values are of particular interest and will reward bonuses:</b>\
 			<br>"
-		for (var/peak in shippingmarket.pressure_crystal_peaks)
-			. += "[peak] kiloblast: \
-				Maximum estimated value: [round(5 * PRESSURE_CRYSTAL_VALUATION(peak))] credits.<br>"
+		var/list/hit_bounties = list()
+		for (var/datum/pressure_crystal_bounty/bounty in shippingmarket.pressure_crystal_peaks)
+			if(bounty.status == CRYSTAL_BOUNTY_STATUS_INCOMPLETE)
+				. += "[bounty.target_pressure] kiloblast: \
+				Maximum estimated value: [round(5 * PRESSURE_CRYSTAL_VALUATION(bounty.target_pressure))] credits.<br>"
+			else
+				hit_bounties.Add(bounty)
 		. += "<br><b>Pressure crystal values already sold:</b>\
 			<br>"
+		for(var/datum/pressure_crystal_bounty/bounty in hit_bounties)
+			. += "[bounty.target_pressure] kiloblast bounty worth [bounty.sold_value] credits claimed with \a [bounty.status] specimen.<br>"
 		for (var/value in shippingmarket.pressure_crystal_sales)
 			. += "[value] kiloblast for [shippingmarket.pressure_crystal_sales[value]] credits.<br>"
 
