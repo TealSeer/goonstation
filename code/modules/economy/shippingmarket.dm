@@ -38,11 +38,12 @@
 	var/list/supply_requests = list() // Pending requests, of type /datum/supply_order
 	var/list/supply_history = list() // History of all approved requests, of type string
 
-	// Both of these are string indexed because byond will whine and complain and explode otherwise
-	/// Previously sold pressure crystal values, will negatively affect future sales (associative list of pressure to credit value)
+	/// Previously sold pressure crystal values, will prevent future sales within 10 kiloblast in either direction (associative list of pressure to credit value)
 	var/list/pressure_crystal_sales = list()
-	/// Pressure crystal market peaks, will positively affect future sales (associative list of pressure to multipliers)
+	/// Active and completed pressure crystal bounties (list of /datum/pressure_crystal_bounty instances)
 	var/list/pressure_crystal_peaks = list()
+	/// Whether the crystal bazaar should still be generating new bounties, shuts down once it runs out of possible values that aren't duplicates/already done
+	var/pressure_crystal_bounties_active = TRUE
 
 	var/points_per_crate = 10
 
@@ -104,13 +105,48 @@
 	proc/add_commodity(var/datum/commodity/new_c)
 		src.commodities["[new_c.comtype]"] = new_c
 
+	#define NUM_WITHIN_RANGE(number, target, range) (abs(number - target) < range)
+	/// Generate a list of amount_to_generate numbers between min_value and max_value, none of which are within blacklist_radius of any of the values in blacklist
+	proc/generate_bounty_numbers(min_value, max_value, amount_to_generate, list/blacklist, blacklist_radius)
+		var/list/generated_values = list()
+		var/fail_count = 0
+
+		generating_loop:
+			while(length(generated_values) < amount_to_generate && fail_count < 30)
+				var/new_number = rand(min_value, max_value)
+				for(var/existing_number in generated_values)
+					if(NUM_WITHIN_RANGE(new_number, existing_number, blacklist_radius))
+						fail_count++
+						continue generating_loop
+				for(var/existing_number in blacklist)
+					if(NUM_WITHIN_RANGE(new_number, existing_number, blacklist_radius))
+						fail_count++
+						continue generating_loop
+				generated_values.Add(new_number)
+				fail_count = 0
+		if(length(generated_values) < amount_to_generate)
+			// If we tried 30 times and couldn't find a legal value for a new bounty there's probably none left, show's over
+			src.pressure_crystal_bounties_active = FALSE
+		return generated_values
+	#undef NUM_WITHIN_RANGE
+
 	/// set up the pressure crystal bounties
 	proc/generate_pressure_crystal_peaks()
+		if(!src.pressure_crystal_bounties_active) return
+
 		var/active_bounty_count = 0
+		var/list/used_values = list()
+
 		for(var/datum/pressure_crystal_bounty/bounty in src.pressure_crystal_peaks)
+			used_values.Add(bounty.target_pressure)
 			if(bounty.status == CRYSTAL_BOUNTY_STATUS_INCOMPLETE) active_bounty_count++
-		for(var/i in 1 to PRESSURE_CRYSTAL_PEAK_COUNT - active_bounty_count)
-			src.pressure_crystal_peaks.Add(new /datum/pressure_crystal_bounty(rand(50, 300)))
+
+		for(var/num in src.pressure_crystal_sales)
+			used_values.Add(text2num(num))
+
+		var/list/new_bounties = src.generate_bounty_numbers(50, 300, PRESSURE_CRYSTAL_PEAK_COUNT - active_bounty_count, used_values, 10)
+		for(var/new_bounty in new_bounties)
+			src.pressure_crystal_peaks.Add(new /datum/pressure_crystal_bounty(new_bounty))
 
 	proc/add_req_contract()
 		if(length(req_contracts) >= max_req_contracts)

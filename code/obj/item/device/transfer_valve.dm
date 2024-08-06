@@ -592,7 +592,7 @@ TYPEINFO(/obj/item/device/transfer_valve/briefcase)
 		if (src.broken)
 			. += "<br>[SPAN_ALERT("This crystal has been broken by an explosion too powerful for it to handle, it is worthless.")]"
 		else if (src.pressure)
-			. += "<br>[SPAN_NOTICE("This crystal has already measured something. Another explosion will overwrite the previous results.")]"
+			. += "<br>[SPAN_NOTICE("This crystal has already measured something. Another explosion will shatter it.")]"
 
 	ex_act(severity, fingerprints, power, datum/explosion/explosion)
 		if(src.broken)
@@ -602,11 +602,13 @@ TYPEINFO(/obj/item/device/transfer_valve/briefcase)
 
 		logTheThing(LOG_BOMBING, src, "is hit by an explosion of power [exp_power] calculated from [power ? "power [power]" : "severity [severity]"]")
 
-		if (src.last_explode_time < world.time)
+		if (!src.last_explode_time)
 			src.pressure = exp_power
-		else // sum the power of multiple explosions at roughly the same instant, but diminishingly
-			// preferring stronger explosions, too
-			src.pressure = max(src.pressure, exp_power) + sqrt(min(src.pressure, exp_power))
+		else
+			src.broken = TRUE
+			src.icon_state = "pressure_broken"
+			return
+
 		var/icon_num
 		if (exp_power < 10)
 			icon_num = 3
