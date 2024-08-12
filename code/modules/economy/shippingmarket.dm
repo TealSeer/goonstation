@@ -558,14 +558,21 @@
 		var/value = PRESSURE_CRYSTAL_VALUATION(pc.pressure)
 		/// bounty this pressure crystal fulfills, if any
 		var/datum/pressure_crystal_bounty/hit_bounty = null
-		//for each previously sold pressure crystal
+		// check previous non-bounty sales for duplicate value
 		for (var/sale in src.pressure_crystal_sales)
 			var/sale_value = text2num(sale)
 			var/minus = abs(pc.pressure - sale_value)
 			if(minus < 10)
 				value = 0
 		for (var/datum/pressure_crystal_bounty/bounty in src.pressure_crystal_peaks)
-			if(bounty.status != CRYSTAL_BOUNTY_STATUS_INCOMPLETE) continue
+			// check completed bounties for duplicate value
+			if(bounty.status != CRYSTAL_BOUNTY_STATUS_INCOMPLETE)
+				var/minus = abs(pc.pressure - bounty.target_pressure)
+				if(minus < 10)
+					value = 0
+					break
+
+			// otherwise check if this sale meets one of the incomplete ones
 			if(!bounty.meets_bounty(pc.pressure)) continue
 			value = bounty.calculate_payout(pc.pressure, sell)
 			hit_bounty = bounty
