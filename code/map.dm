@@ -101,6 +101,7 @@ var/global/list/mapNames = list(
 		/atom/movable/screen/parallax_render_source/space_1,
 		/atom/movable/screen/parallax_render_source/space_2,
 		/atom/movable/screen/parallax_render_source/planet/quadriga,
+		/atom/movable/screen/parallax_render_source/planet/channel,
 		/atom/movable/screen/parallax_render_source/planet/amantes,
 		/atom/movable/screen/parallax_render_source/asteroids_far,
 		/atom/movable/screen/parallax_render_source/asteroids_near,
@@ -428,7 +429,7 @@ var/global/list/mapNames = list(
 	Z_LEVEL_PARALLAX_RENDER_SOURCES(1) = list(
 		/atom/movable/screen/parallax_render_source/space_1,
 		/atom/movable/screen/parallax_render_source/space_2,
-		/atom/movable/screen/parallax_render_source/typhon/cogmap2,
+		/atom/movable/screen/parallax_render_source/planet/mundus,
 		/atom/movable/screen/parallax_render_source/planet/iustitia,
 		/atom/movable/screen/parallax_render_source/planet/iudicium,
 		)
@@ -803,7 +804,7 @@ var/global/list/mapNames = list(
 	merchant_right_centcom = /area/shuttle/merchant_shuttle/right_centcom/cogmap
 	merchant_right_station = /area/shuttle/merchant_shuttle/right_station/cogmap
 
-	shipping_destinations = list("North", "South")
+	shipping_destinations = list("North Carousel", "South Carousel", "East Carousel", "West Carousel")
 
 	valid_nuke_targets = list("the fitness room" = list(/area/station/crew_quarters/fitness),
 		"the quartermaster's office" = list(/area/station/quartermaster/office),
@@ -1104,8 +1105,8 @@ var/global/list/mapNames = list(
 	job_limits_override = list(
 		/datum/job/special/atmospheric_technician = 1,
 		/datum/job/special/hairdresser = 1,
-		/datum/job/special/research_assistant = 2,
-		/datum/job/special/medical_assistant = 2
+		/datum/job/research/research_assistant = 2,
+		/datum/job/research/medical_assistant = 2
 	)
 
 	windows = /obj/window/auto
