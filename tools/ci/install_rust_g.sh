@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-source buildByond.conf
+source "$1/buildByond.conf"
 
 original_dir=$PWD
 cd "$1"
