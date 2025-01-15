@@ -15,6 +15,6 @@ static_files:
 # String dictionary. The value is the location of the file in the repo to upload to TGS. The key is the name of the file to upload to "<instance_path>/Configuration/EventScripts/"
 # This one is for Linux hosted servers
 linux_scripts:
-  PreCompile.sh: tools/ci/install_rust_g.sh
+  PreCompile.sh: tools/tgs_scripts/PreCompile.sh
 # The security level the game should be run at
 security: Trusted
