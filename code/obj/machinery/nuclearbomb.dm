@@ -166,7 +166,7 @@ ADMIN_INTERACT_PROCS(/obj/machinery/nuclearbomb, proc/arm, proc/set_time_left)
 
 		#define NUKE_AREA_CHECK (!src.armed && isturf(src.loc) && (\
 				(ispath(target_area) && istype(get_area(src), target_area)) || \
-				(islist(target_area) && ((get_area(src)):type in target_area)) \
+				(islist(target_area) && istypes(get_area(src), target_area)) \
 			))
 
 		if(!src.target_override && !istype(ticker?.mode, /datum/game_mode/nuclear))
@@ -200,6 +200,7 @@ ADMIN_INTERACT_PROCS(/obj/machinery/nuclearbomb, proc/arm, proc/set_time_left)
 		src.armed = TRUE
 		src.anchored = ANCHORED
 		if (src.z == Z_LEVEL_STATION && src.boom_size == "nuke")
+			SEND_GLOBAL_SIGNAL(COMSIG_GLOBAL_NUKE_PLANTED)
 			src.change_status_display()
 		if (!src.image_light)
 			src.image_light = image(src.icon, "nblightc")
@@ -274,6 +275,13 @@ ADMIN_INTERACT_PROCS(/obj/machinery/nuclearbomb, proc/arm, proc/set_time_left)
 							SPAWN(R.recharge)
 								R.recharging = 0
 
+		if (istype(W, /obj/item/wrench/battle))
+			if(src._health < src._max_health)
+				SETUP_GENERIC_ACTIONBAR(user, src, 5 SECONDS, /obj/machinery/nuclearbomb/proc/repair_nuke, null, 'icons/obj/items/tools/wrench.dmi', "battle-wrench", "[user] repairs [src]!", null)
+			else
+				boutput(user, SPAN_NOTICE("[src] is already fully repaired!"))
+			return
+
 		if (isnukeop(user) && !src.anyone_can_activate)
 			if (src.armed == 1)
 				boutput(user, SPAN_NOTICE("You don't need to do anything else with the bomb."))
@@ -287,10 +295,6 @@ ADMIN_INTERACT_PROCS(/obj/machinery/nuclearbomb, proc/arm, proc/set_time_left)
 				// Give the player a notice so they realize what has happened
 				boutput(user, SPAN_ALERT("The screws are all weird safety-bit types! You can't turn them!"))
 				return
-
-		if (istype(W, /obj/item/wrench/battle) && src._health <= src._max_health)
-			SETUP_GENERIC_ACTIONBAR(user, src, 5 SECONDS, /obj/machinery/nuclearbomb/proc/repair_nuke, null, 'icons/obj/items/tools/wrench.dmi', "battle-wrench", "[user] repairs the [src]!", null)
-			return
 
 		if (W && !(istool(W, TOOL_SCREWING | TOOL_SNIPPING) || istype(W, /obj/item/disk/data/floppy/read_only/authentication)))
 			switch (W.force)

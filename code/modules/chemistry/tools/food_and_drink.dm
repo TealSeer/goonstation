@@ -26,14 +26,26 @@ ABSTRACT_TYPE(/obj/item/reagent_containers/food)
 	var/did_stomach_react = 0					//! Has this already reacted when being digested
 	var/digest_count = 0						//! How digested is this while in stomach
 	var/dissolve_threshold = 20					//! How digested something needs to be before it dissolves
+	var/heats_into = null						//! Type path of the thing this becomes when heated
+	var/heat_threshold = T0C + 500				//! Temperature required for this to cook from ambient air heat
 	rc_flags = 0
+
+	temperature_expose(datum/gas_mixture/air, temperature, volume)
+		. = ..()
+		if (src.heats_into && temperature > src.heat_threshold)
+			src.on_temperature_cook()
+			new src.heats_into(src.loc)
+			qdel(src)
+
+	proc/on_temperature_cook()
+		return
 
 	///Slowly dissolve in stomach, releasing reagents
 	proc/process_stomach(mob/living/owner, var/process_rate = 5)
 		src.digest_count += process_rate
 		if (owner && src.reagents?.total_volume > 0)
 			if (!src.did_stomach_react)
-				src.reagents.reaction(owner, INGEST, src.reagents.total_volume)
+				src.reagents.reaction(owner, INGEST, src.reagents.total_volume, paramslist = list("digestion" = TRUE))
 				src.did_stomach_react = 1
 
 			src.reagents.trans_to(owner, process_rate, HAS_ATOM_PROPERTY(owner, PROP_MOB_DIGESTION_EFFICIENCY) ? GET_ATOM_PROPERTY(owner, PROP_MOB_DIGESTION_EFFICIENCY) : 1)
@@ -59,12 +71,10 @@ ABSTRACT_TYPE(/obj/item/reagent_containers/food)
 			return TRUE
 		return FALSE
 
-	proc/get_food_color()
-		if (food_color) // keep manually defined food colors
-			return food_color
-		var/icon/I = istype(src.icon, /icon) ? src.icon : icon(src.icon, src.icon_state)
-		food_color = get_average_color(I)
-		return food_color
+	get_average_color()
+		if (src.food_color) // keep manually defined food colors
+			return src.food_color
+		return ..()
 
 	proc/heal(var/mob/living/M)
 		SHOULD_CALL_PARENT(TRUE)
@@ -225,6 +235,10 @@ ABSTRACT_TYPE(/obj/item/reagent_containers/food/snacks)
 						src.reagents.add_reagent("ants", src.ant_amnt)
 						src.name = "[name_prefix("ant-covered", 1)][src.name][name_suffix(null, 1)]"
 
+	process_sliced_products(obj/item/reagent_containers/food/snacks/slice, amount_to_transfer)
+		. = ..()
+		if (istype(slice))
+			slice.food_effects |= src.food_effects
 
 	attackby(obj/item/W, mob/user)
 		if (istype(W,/obj/item/kitchen/utensil/fork) || isspooningtool(W))
@@ -407,7 +421,7 @@ ABSTRACT_TYPE(/obj/item/reagent_containers/food/snacks)
 		src.heal(consumer)
 		playsound(consumer.loc,'sound/items/eatfood.ogg', rand(10,50), 1)
 		on_bite(consumer, feeder, ethereal_eater)
-		if (src.festivity && !ethereal_eater)
+		if (src.festivity && !ethereal_eater && !inafterlife(consumer))
 			modify_christmas_cheer(src.festivity)
 		if (!src.bites_left)
 			if (istype(src, /obj/item/reagent_containers/food/snacks/plant/) && prob(20))
@@ -2190,7 +2204,28 @@ ADMIN_INTERACT_PROCS(/obj/item/reagent_containers/food/drinks/drinkingglass, pro
 						if(src.reagents.has_reagent(O.ids[i]))
 							O.completed |= 1 << i-1
 		else
-			user.visible_message("<b>[user.name]</b> shakes the container, but it's empty!.")
+			user.visible_message("<b>[user.name]</b> shakes the container, but it's empty!")
+
+
+	on_reagent_change()
+		..()
+		src.UpdateIcon()
+
+	update_icon()
+		..()
+		if (src.reagents.total_volume == 0)
+			icon_state = initial(icon_state)
+		else if (src.reagents.total_temperature >= (T0C+97))
+			icon_state = initial(icon_state)+"_hot"
+		else if (src.reagents.total_temperature > (T0C+30)) //beer can be our point of reference
+			icon_state = initial(icon_state)+"_warm"
+		else if (src.reagents.total_temperature <= (T0C-23))
+			icon_state = initial(icon_state)+"_freeze"
+		else if (src.reagents.total_temperature <= (T0C+7))
+			icon_state = initial(icon_state)+"_cool"
+		else
+			icon_state = initial(icon_state)
+
 
 /obj/item/reagent_containers/food/drinks/cocktailshaker/golden
 	name = "golden cocktail shaker"

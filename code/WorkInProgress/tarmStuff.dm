@@ -437,7 +437,7 @@
 
 /datum/projectile/bullet/gyrojet
 	name = "gyrojet bullet"
-	projectile_speed = 6
+	projectile_speed = 7
 	max_range = 500
 	dissipation_rate = 0
 	damage = 10
@@ -450,10 +450,10 @@
 		O.internal_speed = projectile_speed
 
 	tick(obj/projectile/O)
-		O.internal_speed = min(O.internal_speed * 1.25, 32)
+		O.internal_speed = min(O.internal_speed * 1.33, 72)
 
 	get_power(obj/projectile/P, atom/A)
-		return 15 + P.internal_speed
+		return 15 + (P.internal_speed * 0.66)
 
 //desert eagle. The biggest, baddest handgun
 /obj/item/gun/kinetic/deagle
@@ -1014,3 +1014,8 @@ TYPEINFO(/obj/item/device/geiger)
 	proc/set_followup_proj(datum/projectile/proj_data)
 		for(var/datum/projectile/special/timegun/ts in src.projectiles)
 			ts.followup = proj_data
+
+/*todo to clean up atom prop define readability (linter does not handle the ##update correctly, and there's no way to sanely unlint this mess afaik)
+#define DEFINE #define
+#define DEFINE_PROP(name, method, update...) DEFINE PROP_##name(x) x(#name, APPLY_ATOM_PROPERTY_##method, REMOVE_ATOM_PROPERTY_##method, ##update)
+*/

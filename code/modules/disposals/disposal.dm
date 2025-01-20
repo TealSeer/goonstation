@@ -135,7 +135,7 @@
 		for (var/mob/M in hearers(our_turf))
 			boutput(M, "<FONT size=[max(0, 5 - GET_DIST(src, M))]>CLONG, clong!</FONT>")
 
-		if(ON_COOLDOWN(src, "pipeclang", (6 DECI SECONDS)))
+		if(!ON_COOLDOWN(src, "pipeclang", 1 SECOND))
 			playsound(src.loc, 'sound/impact_sounds/Metal_Clang_1.ogg', 50, 0, 0)
 			if(!istype(user,/mob/living/critter/small_animal))
 				damage_pipe()
@@ -1234,9 +1234,9 @@ TYPEINFO(/obj/disposalpipe/loafer)
 						newLoaf.loaf_factor += (newLoaf.loaf_factor / 10) + 50
 					if(!isdead(M))
 						M:emote("scream")
-					M.death()
 					if (M.mind || M.client)
 						M.ghostize()
+					M.death()
 				else if (isitem(newIngredient))
 					var/obj/item/I = newIngredient
 					newLoaf.loaf_factor += I.w_class * 5

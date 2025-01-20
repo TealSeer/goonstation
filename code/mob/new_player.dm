@@ -259,6 +259,7 @@ var/global/datum/mutex/limited/latespawning = new(5 SECONDS)
 							S.mind?.add_antagonist(ROLE_SYNDICATE_ROBOT, respect_mutual_exclusives = FALSE, source = ANTAGONIST_SOURCE_LATE_JOIN)
 						S.Equip_Bank_Purchase(S.mind?.purchased_bank_item)
 						S.apply_roundstart_events()
+						S.show_laws()
 						SPAWN(1 DECI SECOND)
 							S.bioHolder?.mobAppearance?.pronouns = S.client.preferences.AH.pronouns
 							S.choose_name()
@@ -835,7 +836,7 @@ a.latejoin-card:hover {
 
 		if(new_character?.client)
 			SPAWN(0)
-				new_character.client.loadResources()
+				new_character.client?.loadResources()
 
 		new_character.temporary_attack_alert(1200) //Messages admins if this new character attacks someone within 2 minutes of signing up. Might help detect grief, who knows?
 		new_character.temporary_suicide_alert(1500) //Messages admins if this new character commits suicide within 2 1/2 minutes. probably a bit much but whatever

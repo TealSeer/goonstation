@@ -71,8 +71,10 @@
 		knockoff
 			name = "ThoughtOS 1.2"
 			note = "Congratulation! You have chosen the ElecTek 5 Personnel Data Actuator!"
-			message_on = 0
 			knockoff = TRUE
+
+			mess_off
+				message_on = 0
 
 		disposing()
 			if (detected_pdas)
@@ -573,10 +575,7 @@
 							return
 
 					if("ack")
-						if(src.message_last + 20 > TIME) //Message sending delay
-							return
 						src.CrisisAck(href_list["alert_group"], href_list["caller"], href_list["noreply"])
-						src.master.add_fingerprint(usr)
 						return
 
 					if("rename")
@@ -1199,6 +1198,9 @@
 		/// * caller_id: The PDA ID who called the alert
 		/// * noreply: `noreply` data from alert message signal
 		proc/CrisisAck(group_id, caller_id, noreply)
+			if(src.message_last + 20 > TIME) //Message sending delay
+				return
+			src.master.add_fingerprint(usr)
 			var/message = "ACK: Responding to crisis alert!"
 
 			var/caller_reply = TRUE
